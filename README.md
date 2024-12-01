@@ -29,9 +29,9 @@ cd "NetworkCollectDFIR"
 ### Wget
 
 ```bash
-wget https://github.com/mauricelambert/QueryApacheAccessLog/archive/refs/heads/main.zip
+wget https://github.com/mauricelambert/NetworkCollectDFIR/archive/refs/heads/main.zip
 unzip main.zip
-cd QueryApacheAccessLog-main
+cd NetworkCollectDFIR-main
 ```
 
 ## Usages
