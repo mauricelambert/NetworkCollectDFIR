@@ -18,11 +18,20 @@ This package require:
 
 ## Installation
 
+### Git
+
 ```bash
 python3 -m pip install scapy
 git clone "https://github.com/mauricelambert/NetworkCollectDFIR.git"
 cd "NetworkCollectDFIR"
-python3 -m pip install .
+```
+
+### Wget
+
+```bash
+wget https://github.com/mauricelambert/QueryApacheAccessLog/archive/refs/heads/main.zip
+unzip main.zip
+cd QueryApacheAccessLog-main
 ```
 
 ## Usages
