@@ -46,6 +46,7 @@ python3 network_ir_collect.py <file.pcap>
 
  - [X] Extract SMB files and generates hashes (MD5, SHA1, SHA256)
  - [X] Extract HTTP files and generates hashes (MD5, SHA1, SHA256)
+ - [ ] Extract HTTP Content disposition (https://www.ietf.org/rfc/rfc2183.txt)
  - [ ] Extract FTP files
  - [ ] Port scan (lot of TCP connection without `ACK`, statistcs are generated and reported)
  - [ ] HTTP bruteforce path (hacktools like `dirb`, `dirbuster`, `ffuf`, `gobuster`, bruteforce HTTP path to discover hidden or misconfigured files) (lot of 404 error pages and lot of path, statistcs are generated and reported)
