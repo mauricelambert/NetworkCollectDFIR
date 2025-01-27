@@ -4,7 +4,7 @@
 ###################
 #    This script collects data for incident response
 #    and forensic (useful for CTF and DFIR challenges!)
-#    Copyright (C) 2024  Maurice Lambert
+#    Copyright (C) 2024, 2025  Maurice Lambert
 
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -32,6 +32,11 @@ from hashlib import sha512, md5, sha1
 from dataclasses import dataclass, field
 from collections import Counter, defaultdict
 from time import gmtime, strftime, struct_time
+
+try:
+    SMBNegociate_Protocol_Request_Header_Generic
+except:
+    SMBNegociate_Protocol_Request_Header_Generic = NBTSession
 
 if len(argv) != 2:
     print("USAGES: python3 network_ir_collect.py <file.pcap>")
@@ -210,16 +215,19 @@ for index, packet in enumerate(sniff(offline=pcap_filename)):
             counters["icmp-echo-request"][packet[IP].src] += 1
         layers = packet.layers()
         if is_udp and packet[UDP].sport == 137 and not packet.haslayer(NBNSQueryRequest):
-            response = NBNSQueryResponse(
-                raw(NBNSHeader(raw(packet[UDP].payload)).payload)
-            )
+            data = raw(NBNSHeader(raw(packet[UDP].payload)).payload)
+            response = (NBNSQueryResponse if len(data) >= 43 else NBNSQueryRequest)(data)
             if response.QUESTION_TYPE == 32:
-                add_datetime(datetime, f"NetbiosName ({packet[1].src}): {', '.join(x.NB_ADDRESS for x in response.ADDR_ENTRY if not isinstance(x, Raw))} ({response.RR_NAME.decode('latin-1')})", datetimes["name-resolution"])
+                if len(data) >= 43:
+                    add_datetime(datetime, f"NetbiosName ({packet[1].src}): {', '.join(x.NB_ADDRESS for x in response.ADDR_ENTRY if not isinstance(x, Raw))} ({response.RR_NAME.decode('latin-1')})", datetimes["name-resolution"])
+                else:
+                    add_datetime(datetime, f"NetbiosIP ({packet[1].src}): ({response.QUESTION_NAME.decode('latin-1')})", datetimes["name-resolution"])
             elif response.QUESTION_TYPE == 33:
-                response = NBNSNodeStatusResponse(
-                    raw(NBNSHeader(raw(packet[UDP].payload)).payload)
-                )
-                add_datetime(datetime, f"NetbiosIP ({packet[1].src}): ({', '.join(x.NETBIOS_NAME.decode('latin-1') for x in response.NODE_NAME)})", datetimes["name-resolution"])
+                response = (NBNSNodeStatusResponse if len(data) >= 43 else NBNSNodeStatusRequest)(data)
+                if len(data) >= 43:
+                    add_datetime(datetime, f"NetbiosIP ({packet[1].src}): ({', '.join(x.NETBIOS_NAME.decode('latin-1') for x in response.NODE_NAME)})", datetimes["name-resolution"])
+                else:
+                    add_datetime(datetime, f"NetbiosIP ({packet[1].src}): ({response.QUESTION_NAME.decode('latin-1')})", datetimes["name-resolution"])
         elif is_udp and (packet[UDP].sport == 5353 or packet[UDP].sport == 5355 or packet[UDP].sport == 53):
             if packet[UDP].sport == 5353:
                 response = LLMNRResponse(raw(packet[UDP].payload))
@@ -310,6 +318,9 @@ for index, packet in enumerate(sniff(offline=pcap_filename)):
                 content_type = packet[HTTPResponse].Content_Type.decode('latin-1')
                 add_datetime(datetime, f"Content-Type: {content_type}", datetimes["http"])
                 session.response_files[-1].type = content_type
+            if packet[HTTPResponse].Content_Disposition:
+                content_disposition = packet[HTTPResponse].Content_Disposition.decode('latin-1')
+                add_datetime(datetime, f"Content-Disposition: {content_disposition}", datetimes["http"])
             add_datetime(datetime, f"Server: {(packet[HTTPResponse].Server or b'No Server').decode('latin-1')}", datetimes["http"])
             add_datetime(datetime, f"Status code: {packet[HTTPResponse].Status_Code.decode('latin-1')}", datetimes["http"])
             if packet.haslayer(Raw) and not zero_window_probe:
